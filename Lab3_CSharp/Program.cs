@@ -1,11 +1,11 @@
-﻿using System;
+﻿using Microsoft.VisualBasic;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Collections;
 
 namespace Class_training
 {
-	
+
 	class Person : IDateAndCopy
 	{
 
@@ -73,6 +73,25 @@ namespace Class_training
 			return name + " " + surname;
 		}
 
+
+
+
+		public static bool operator == (Person exam, Person exam2)
+		{
+			if (exam.Equals(exam2) == true)
+				return true;
+			else
+				return false;
+		}
+
+		public static bool operator !=(Person exam, Person exam2)
+		{
+			if (exam.Equals(exam2) != true)
+				return true;
+			else
+				return false;
+		}
+
 		public override bool Equals(object obj)
 		{
 			Person example = (Person)obj;
@@ -90,12 +109,12 @@ namespace Class_training
 
 		public override int GetHashCode()
 		{
-			return base.GetHashCode();
+			return this.ToString().GetHashCode();
 		}
 
 		public virtual object DeepCopy()
 		{
-			return 0;
+			return new Person(this.name, this.surname, this.bornDate);
 		}
 
 	}
@@ -133,7 +152,8 @@ namespace Class_training
 		}
 		public override string ToString()
 		{
-			return string.Format($"{diagnos} -  диагноз \n" +
+			return string.Format($"{Name} {Surname} \n" +
+				$"{diagnos} -  диагноз \n" +
 				$"{timeOfEntering} -  дата поступлеиния в стационар \n");
 		}
 	}
@@ -171,7 +191,7 @@ namespace Class_training
 		}
 	}
 
-	class Doctor : Person, IDateAndCopy, System.Collections.IEnumerable
+	class Doctor : Person
 	{
 		private string specifacation;
 		private Category category;
@@ -181,9 +201,8 @@ namespace Class_training
 
 
 
-		private Person personalInformation;
 
-		public Person PersonalInformation { get { return personalInformation; } set { personalInformation = value; } }
+		public Person PersonalInformation { get { return new Person(this.Name, this.Surname, this.BornDate); } set { this.name = value.Name; this.surname = value.Surname; this.BornDate = value.BornDate; } }
 
 		public string Specifacation { get { return specifacation; } set { specifacation = value; } }
 
@@ -198,14 +217,13 @@ namespace Class_training
 
 		public Doctor()
 		{
-			personalInformation = new Person();
 			specifacation = "default";
 			category = Category.High;
 			workTime = 99;
 		}
 		public Doctor(Person personalInformation, string specifacation, Category category, int workTime)
+			:base (personalInformation.Name, personalInformation.Surname, personalInformation.BornDate)
 		{
-			this.personalInformation = personalInformation;
 			this.specifacation = specifacation;
 			this.category = category;
 			this.workTime = workTime;
@@ -263,17 +281,17 @@ namespace Class_training
 				patientsInfo += t.ToString();
 			}
 
-			return string.Format($"{personalInformation} - данные врача \n" +
-				$"{specifacation} - специальность \n" +
-				$"{category} - категория врача \n" +
-				$"{workTime} - стаж \n" +
+			return string.Format($"{PersonalInformation}\n" +
+				$"{specifacation}, " +
+				$"{category}, " +
+				$"{workTime} \n" +
 				$"{diplomsInfo}\n" +
 				$"{patientsInfo}\n");
 		}
 
 		public override string ToShortString()
 		{
-			return string.Format($"{personalInformation}\n" +
+			return string.Format($"{PersonalInformation}\n" +
 				$"{specifacation} - специальность \n" +
 				$"{category} - категория врача \n" +
 				$"{workTime} - стаж \n");
@@ -281,8 +299,36 @@ namespace Class_training
 
 		public object DeepCopy(Doctor doctor)
 		{
+			Doctor Copy = new Doctor()
+			{
+				PersonalInformation = this.PersonalInformation,
+				Specifacation = this.Specifacation,
+				Category = this.Category,
+				workExperience = this.workExperience,
+				PatientList = new List<Patient>(),
+				DiplomasList = new List<Diploma>()
+			};
 
-			return doctor;
+			foreach (Patient p in PatientList)
+			{
+				Copy.PatientList.Add(new Patient(new Person(p.Name, p.Surname, p.BornDate), p.Diagnos, p.TimeOfEntering));
+			}
+
+			/*for (int i = 0; i < this.PatientList.Count; i++)
+			{
+				Copy.PatientList.Add(new Patient(new Person(this.PatientList[i].Name, this.PatientList[i].Surname, this.PatientList[i].BornDate), this.PatientList[i].Diagnos, this.PatientList[i].TimeOfEntering));
+			}*/
+			foreach (Diploma p in DiplomasList)
+			{
+				Copy.DiplomasList.Add(new Diploma(p.orgName, p.qualifications, p.diplomeDateTime));
+			}
+
+			/*for (int i = 0; i < this.PatientList.Count; i++)
+			{
+				Copy.DiplomasList.Add(new Diploma(this.DiplomasList[i].orgName, this.DiplomasList[i].qualifications, this.DiplomasList[i].diplomeDateTime));
+			}
+*/
+			return Copy;
 		}
 
 		
@@ -306,12 +352,24 @@ namespace Class_training
 			}
 		}
 
-		public System.Collections.IEnumerator GetEnumerator()
+
+		public IEnumerator GetEnumerator()
 		{
 			return patientList.GetEnumerator();
 		}
 
-		public System.Collections.IEnumerator GetPatientWith(string diagnos)
+		public IEnumerable GetTodayPatient()
+		{
+			foreach (Patient p in patientList)
+			{
+				if (p.TimeOfEntering == DateTime.Today)
+				{
+					yield return p;
+				}
+			}
+		}
+
+		public IEnumerable GetPatientWith(string diagnos)
 		{
 			foreach (Patient p in patientList)
 			{
@@ -321,6 +379,7 @@ namespace Class_training
 				}
 			}
 		}
+
 	}
 
 
@@ -333,7 +392,7 @@ namespace Class_training
 			Person person_1 = new Person("Кирилл", "Родин", new DateTime(2002, 8, 17));
 			Person person_2 = new Person("Кирилл", "Родин", new DateTime(2002, 8, 17));
 
-			if (person_1.Equals(person_2))
+			if (person_1 == person_2)
 			{
 				Console.WriteLine("----------------------------------------\n\n1 задание: \n\n----------------------------------------\n");
 				Console.WriteLine("Они равны");
@@ -348,33 +407,27 @@ namespace Class_training
 			Console.WriteLine($"hash code of person 2: {person_2.GetHashCode()}");
 			Console.WriteLine();
 
-			Console.ReadLine();
 			// второе задание
 			Doctor doctor = new Doctor(new Person("Валерий", "Жмишенко", new DateTime(1991, 6, 5)), "хирург", Category.High, 5000);
 			doctor.AddDiplomas(new Diploma(), new Diploma("MDA", "The best", new DateTime(2002, 2, 4)));
-			doctor.AddPatients(new Patient(person_1, "healthy", new DateTime(2020, 5, 14)), new Patient());
-			Console.WriteLine("----------------------------------------\n\n2 задание: \n\n----------------------------------------\n" + doctor.ToShortString());
+			doctor.AddPatients(new Patient(person_1, "healthy", new DateTime(2020, 5, 15)), new Patient());
+			Console.WriteLine("----------------------------------------\n\n2 задание: \n\n----------------------------------------\n" + doctor);
 			Console.WriteLine();
-			Console.ReadLine();
+
 			//  третье задание
 			Console.WriteLine("----------------------------------------\n\n3 задание: \n\n----------------------------------------\n" + doctor.PersonalInformation);
 			Console.WriteLine();
 
-			Console.ReadLine();
 			// четвертое задание
-			Console.WriteLine("----------------------------------------\n\n4 задание: \n\n----------------------------------------\n" + doctor.PersonalInformation);
+			Console.WriteLine("----------------------------------------\n\n4 задание: \n\n----------------------------------------\n");
 			Doctor doctorCopy = (Doctor)doctor.DeepCopy(doctor);
-
-
-			Console.WriteLine(doctor.ToShortString());
-			doctor.Specifacation = "Анастезиолог";
-
+			doctor.PatientList[0].Name = "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
+			doctor.Specifacation = "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&";
+			Console.WriteLine(doctor);
 
 			Console.WriteLine();
-			Console.WriteLine(doctorCopy.ToShortString());
+			Console.WriteLine(doctorCopy);
 
-
-			Console.ReadLine();
 			// пятое задание
 			try
 			{
@@ -386,35 +439,20 @@ namespace Class_training
 			}
 			Console.WriteLine();
 
-			Console.ReadLine();
 			// шестое задание
 			Console.WriteLine("----------------------------------------\n\n6 задание: \n\n----------------------------------------\nЛюди поступившие сегодня:");
-			foreach (Patient p in doctor.PatientList)
+			foreach (Patient p in doctor.GetTodayPatient())
 			{
-				if (p.TimeOfEntering == DateTime.Today)
-				{
-					Console.WriteLine(p.Name + " " + p.Surname);
-					Console.WriteLine(p);
-				}
+				Console.WriteLine(p);
 			}
-
-
-			Console.ReadLine();
 			// седьмое задание
-
-			/*Console.WriteLine("7 задание: \n\nЛюди поступившие с диагнозом 'healthy':");
-			doctor_1.GetPatientWith("healthy");*/
-
 			Console.WriteLine("----------------------------------------\n\n7 задание: \n\n----------------------------------------\nЛюди поступившие с диагнозом 'healthy':");
-			foreach (Patient p in doctor)
+
+			
+			foreach (Patient p in doctor.GetPatientWith("healthy"))
 			{
-				if (p.Diagnos == "healthy")
-				{
-					Console.WriteLine(p.Name + " " + p.Surname);
-					Console.WriteLine(p);
-				}
+				Console.WriteLine(p);
 			}
-			Console.ReadLine();
 		}
 	}
 
